@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Calculate badminton fee Tool</title>
+  <meta name="description" content="1.Copy line Sign up datas.2.Paste the datas in tool" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="max-age=31536000">
+  <link href="/favicon.ico?v=4" rel="shortcut icon" type="image/ico">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      text-align: center;
+    }
+    
+    span {
+      margin-top: 0;
+    }
+    
+    .container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    
+   .area {
+          overflow: hidden;
+          min-height: 50px;
+		  height: 100px;
+		  width: 80%;
+		  max-width: 400px;
+		  margin: 10px 0;
+		  padding: 10px;
+		  font-size: 16px;
+		  border: 1px solid #ccc;
+    }
+    .area1 {
+          overflow: hidden;
+		  height: 22px;
+		  width: 80%;
+		  max-width: 400px;
+		  margin: 10px 0;
+		  padding: 10px;
+		  font-size: 16px;
+		  border: 1px solid #ccc;
+		  resize: none;
+     }
+    .button {
+      padding: 10px 20px;
+      font-size: 16px;
+      border-radius: 5px;
+      cursor: pointer;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+	  touch-action: manipulation;
+    }
+	.toast {
+	  position: fixed;
+	  left: 50%;
+	  background-color: #3498DB;
+      color: #FFFFFF;
+	  padding: 10px 20px;
+	  border-radius: 5px;
+	  opacity: 0;
+	  transition: opacity 0.3s;
+	  
+	}
+	.toast.show {
+	  opacity: 1;
+	  position: fixed;
+	  top: 50%;
+	  left: 50%;
+	  transform: translate(-50%, -50%);
+	}
+
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h3>The tool is calculate badminton fee</h3>
+	<textarea class="area1" pattern="\d*" placeholder="Input total Fee(总金额)" oninput="this.value = this.value.replace(/\D/g, '')" id="txtFee" ></textarea>
+	<div style="width: 98%">
+		<button id="button1" class="button" onclick="paste()">Paste(粘贴)</button>
+		<button id="button2" class="button" >Calculate(计算)</button>
+	</div>
+	<textarea id="input" class="area" placeholder="Click Paste button,Or Press Here 2 sec and paste Line datas" oninput="autoResizeTextarea('input')"></textarea>
+    <textarea id="output" class="area"  placeholder="Calculate Result Here"  oninput="autoResizeTextarea('output')"></textarea>
+	<button id="button3" class="button">Copy Result (复制)</button>
+	<div id="toast" class="toast"></div>
+  </div>
+  <script>
+	  let inputElement = document.getElementById('input');
+	  let button2Element = document.getElementById('button2');
+	  let button3Element = document.getElementById('button3');
+	  let outputElement = document.getElementById('output');
+	  let totalFee = document.getElementById('txtFee');
+	  const kidDiscount = 0.5;
+	  function showToast(message, duration = 2000) {
+	    const toast = document.getElementById('toast');
+	    toast.textContent = message;
+	    toast.classList.add('show');
+	    setTimeout(() => {
+	      toast.classList.remove('show');
+	    }, duration);
+	  }
+	  
+	  function padStartWithSpaces(str, totalLength,char="-") {
+		str = str + "";
+	    const spacesToAdd = totalLength - str.length;
+	    if (spacesToAdd <= 0) {
+	      return str; // 字符串长度已达到或超过指定位数，无需补全
+	    }
+	    
+	    const spaces = char.repeat(spacesToAdd); // 重复空格字符以达到需要补全的位数
+	    return spaces + str;
+	  }
+
+
+	  function roundUpNonZero(num) {
+	    const decimalPart = num % 1; // 获取小数部分
+	  
+	    if (decimalPart > 0) {
+	      return Math.floor(num) + 1;
+	    }
+	    return num; // 不需要进一，直接返回原始数值
+	  }
+	  
+	  // 复制文本到剪贴板
+	  function copy(text) {
+	    navigator.clipboard.writeText(text)
+	      .then(() => {
+	        console.log('Text copied to clipboard');
+	      })
+	      .catch((error) => {
+	        console.error('Error copying text to clipboard:', error);
+	      });
+	  }
+	  
+	  // 从剪贴板粘贴文本
+	  function paste() {
+	    navigator.clipboard.readText()
+	      .then((text) => {
+			  inputElement.value = text;
+			  autoResizeTextarea('input');
+	        console.log('Text pasted from clipboard:', text);
+	      })
+	      .catch((error) => {
+	        console.error('Error pasting text from clipboard:', error);
+	      });
+	  }
+
+	function getConsoleList(l,adultPricePer){
+		let retList = [];
+		l.forEach((data) => {
+			let fee = adultPricePer*data.adults + kidDiscount*adultPricePer*data.kids;
+			//fee = parseFloat(fee.toFixed(2))
+			fee = roundUpNonZero(fee);
+			retList.push({sn:data.sn,name:data.name,adults:data.adults,kids:data.kids,fee:fee});
+		});
+		return retList;
+	}
+    // Calculate
+    button2Element.addEventListener('click', function() {
+	  const dataString = inputElement.value;
+	  // 将数据字符串拆分为行，并移除首行的标题
+	  const rows = dataString.split('\n').slice(1);
+	  let  list = [];
+	  let totelAdultsNum = 0;
+	  let totelKidsNum = 0;
+	  let adultPricePer = 0;
+	  let rowIndex = 1;
+	  try{
+		  // 将每一行拆分为字段，并创建对象数组
+		  rows.map((row) => {
+		  		if(row.trim().length > 0){
+		  		  const [sn, name, adults, kids] = row.replace(/[\s]/g, '').replace(/，/g,',').split(',');
+		  		  let snN = sn.trim().length == 0 ? 0 : parseInt(sn);
+		  		  let adultsN = adults.trim().length == 0 ? 0 : parseInt(adults);
+		  		  let kidsN = (kids === undefined || kids.trim().length == 0) ? 0 : parseInt(kids);
+		  		  list.push({ sn: snN, name:name,adults: adultsN, kids: kidsN});
+		  		  totelAdultsNum = totelAdultsNum + adultsN;
+		  		  totelKidsNum = totelKidsNum + kidsN;
+				  rowIndex++;
+		  		}
+		  });
+		  
+		  let totalFeeV = totalFee.value;
+		  if(totalFeeV !== undefined && totalFeeV.trim().length > 0){
+		  		  let totalFeeVNum = parseInt(totalFeeV);
+		  		  adultPricePer = totalFeeVNum/(totelAdultsNum + kidDiscount*totelKidsNum);
+				  let temp = "Total fee:" + totalFeeV + "\nTotal adults count:"+totelAdultsNum
+				  +"\nTotal kids count:"+totelKidsNum
+				  +"\nOne adult Price is " + parseFloat(adultPricePer.toFixed(2)) 
+				  +"\nOne kid Price is " + parseFloat((kidDiscount*adultPricePer).toFixed(2));
+		  		  temp = temp + "\n---------------------------\n";
+				  let rHtml = temp + "sn,adults,kids,fee,name\n";
+		          let listR = getConsoleList(list,adultPricePer);
+		  		  listR.forEach((data) => {
+		  			rHtml += padStartWithSpaces(data.sn,2," ")+","+padStartWithSpaces(data.adults,6) + ","+padStartWithSpaces(data.kids,4)+",+"+data.fee+","+data.name+"\n";
+		  		  });
+		  		  outputElement.value = rHtml;
+		  		  autoResizeTextarea('output')
+		  }
+		  else{
+		  		  showToast('Please input Total Fee(总金额)');
+		  		  totalFee.focus();
+		  }
+	  }
+	  catch(error){
+		  showToast('There is an error at row number:'+rowIndex);
+	  }
+
+    });
+	
+	totalFee.addEventListener('input', function(event) {
+	  const inputValue = event.target.value;
+	  const numericValue = inputValue.replace(/[^0-9]./g, '');
+	  event.target.value = numericValue;
+	});
+
+    //Copy
+    button3Element.addEventListener('click', function() {
+	  copy(outputElement.value);
+	  showToast('Result Copy Successful.');
+    });
+    // 自动调整 <textarea> 的高度
+    function autoResizeTextarea(id) {
+      const textarea = document.getElementById(id);
+      textarea.style.height = 'auto'; // 重置高度，使其能自动调整
+      // 获取内容的滚动高度并设置为 <textarea> 的高度
+      const scrollHeight = textarea.scrollHeight;
+      textarea.style.height = scrollHeight + 'px';
+    }
+  </script>
+</body>
+</html>
